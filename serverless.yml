@@ -1,0 +1,57 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: personapracticeavb
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: express-serverless
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  # Uncomment to easily set up a custom domain. Read the docs for more details:
+  # https://www.serverless.com/framework/docs/providers/aws/guide/domains
+  # domain: api.example.com
+  environment:
+    BOOKING_TOPIC_ARN:
+      Ref: BookingTopic
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - sns:Publish
+          Resource:
+            - !Ref BookingTopic
+        - Effect: Allow
+          Action:
+            - events:PutEvents
+          Resource:
+            - arn:aws:events:${aws:region}:${aws:accountId}:event-bus/default
+functions:
+  createBooking:
+    handler: src/handlers/bookingHandler.createBooking
+    events: 
+      - httpApi:
+          path: /bookings
+          method: post
+  emailNotification:
+    handler: src/handlers/emailLambdaHandler.sendEmail
+    events:
+      - sns:
+        arn: !Ref BookingTopic
+  smsNotification:
+    handler: src/handlers/smsLambdaHandler.sendSMS
+    events:
+      - sns: 
+        arn: !Ref BookingTopic
+  invoice:
+      handler: src/handlers/invoiceLambdaHandler.generateInvoice
+      events:
+      - eventBridge:
+          pattern:
+            source:
+              - flight.booking
+            detail-type:
+              - BookingCreated
+plugins:
+  - serverless-offline
+resources:
+  - ${file(resources/sns.yml)}

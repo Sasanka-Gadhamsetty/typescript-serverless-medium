@@ -1,0 +1,5 @@
+Resources:
+    BookingTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+          TopicName: booking-notification-topic
